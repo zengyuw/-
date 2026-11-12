@@ -24,6 +24,24 @@ cyl = gas_cylinder_model(gas_initial_conditions, orifice, [valve1, valve2]);
 
 Add the `matlab/` folder to the MATLAB path (ahead of any older `gas_cylinder_model`) so the 3-arg alias is found.
 
+## Physics check: `test_cylinder_blowdown.m`
+
+Runnable blowdown test with the user init (35 MPa, 300 K, 0.18 m³, orifice + two valves):
+
+```matlab
+addpath('<repo>/matlab');   % ahead of any older gas_cylinder_model
+test_cylinder_blowdown
+```
+
+**What it does**
+
+1. Constructs `gas_cylinder_model` and smokes `networkFlow` (no REFPROP required).
+2. If `refpropm` is available: steps `mass_flow` until \(P \approx 0.5\,\mathrm{MPa}\), logs \(P,T,\dot m\) vs time into workspace `blowdown_log`.
+3. Asserts **pass** when final \(T > 200\,\mathrm{K}\) (not tens of kelvin) and prints comparison to an isentropic estimate (ideal-gas and, if possible, REFPROP \(S=\mathrm{const}\)).
+4. If REFPROP is missing: prints a clear **SKIP** for the state-update check; construct + `networkFlow` still run.
+
+**Expected with defaults + REFPROP:** \(T\) at 0.5 MPa stays well above 200 K (often nearer ambient), while isentropic estimates are ~tens of K.
+
 ## Physics change (isentropic → energy + wall heat transfer)
 
 The previous cylinder update forced **constant entropy** after mass left:
