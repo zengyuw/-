@@ -56,6 +56,8 @@ methods
         %两阀都关闭，或气瓶压力低于0.5 MPa时不放气，状态保持不变。
         %状态更新：开系能量衡算 d(mu)/dt = -h_exit*m_dot + Q_dot，
         %其中 Q_dot = h_conv*A_wall*(T_wall - T_gas)，可选壁面热容。
+        %压力/温度字段接受 PO_init/TO_init 或 P0_init/T0_init。
+        conditions = addition_gas_cylinder_parallel_valve.normalizeConditions(conditions);
         PO = conditions.PO_init;
         TO = conditions.TO_init;
         valve1_open = addition_gas_cylinder_parallel_valve.asOpen(valve1_open);
@@ -98,9 +100,13 @@ methods
         T_wall_new = obj.updateWallTemperature(T_wall, TO, time_step, A_wall, A_ext);
         obj.T_wall = T_wall_new;
 
+        P_out = max(PO_new, 0);
+        T_out = max(TO_new, 0);
         new_conditions = struct( ...
-            'PO_init', max(PO_new, 0), ...
-            'TO_init', max(TO_new, 0), ...
+            'PO_init', P_out, ...
+            'TO_init', T_out, ...
+            'P0_init', P_out, ...
+            'T0_init', T_out, ...
             'V', obj.V, ...
             'T_wall', T_wall_new);
         result = [max(flow, 0), TO_new];
@@ -249,6 +255,37 @@ methods (Access = private)
 end
 
 methods (Static)
+    function conditions = normalizeConditions(conditions)
+        % 统一压力/温度字段：接受 PO_init/TO_init 或 P0_init/T0_init。
+        if ~isstruct(conditions) || ~isscalar(conditions)
+            error('addition_gas_cylinder_parallel_valve:BadConditions', ...
+                'conditions 须为标量结构体');
+        end
+        if ~isfield(conditions, 'PO_init') || isempty(conditions.PO_init)
+            if isfield(conditions, 'P0_init') && ~isempty(conditions.P0_init)
+                conditions.PO_init = conditions.P0_init;
+            else
+                error('addition_gas_cylinder_parallel_valve:MissingPressure', ...
+                    'conditions 需要 PO_init 或 P0_init [Pa]');
+            end
+        end
+        if ~isfield(conditions, 'TO_init') || isempty(conditions.TO_init)
+            if isfield(conditions, 'T0_init') && ~isempty(conditions.T0_init)
+                conditions.TO_init = conditions.T0_init;
+            else
+                error('addition_gas_cylinder_parallel_valve:MissingTemperature', ...
+                    'conditions 需要 TO_init 或 T0_init [K]');
+            end
+        end
+        % 双向别名，便于脚本用 P0_init/T0_init 往返
+        conditions.P0_init = conditions.PO_init;
+        conditions.T0_init = conditions.TO_init;
+        if ~isfield(conditions, 'V') || isempty(conditions.V)
+            error('addition_gas_cylinder_parallel_valve:MissingVolume', ...
+                'conditions 需要 V [m^3]');
+        end
+    end
+
     function rho = heliumDensity(T, P)
         % refpropm 压力单位为 kPa，这里的 P 为 Pa。
         addition_gas_cylinder_parallel_valve.requireRefprop();

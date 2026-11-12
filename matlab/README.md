@@ -1,8 +1,28 @@
 # MATLAB: helium cylinder with parallel valves
 
-## Class
+## Classes
 
-`addition_gas_cylinder_parallel_valve.m` — orifice + two parallel solenoid valves, cylinder blowdown state update via REFPROP.
+- `addition_gas_cylinder_parallel_valve.m` — orifice + two parallel solenoid valves, cylinder blowdown via REFPROP + wall heat transfer.
+- `gas_cylinder_model.m` — thin 3-arg alias for scripts that call `gas_cylinder_model(ic, orifice, [v1,v2])`.
+
+### Construct (matches user script)
+
+```matlab
+gas_initial_conditions = struct();
+gas_initial_conditions.P0_init = 35e6;  % Pa (alias of PO_init)
+gas_initial_conditions.T0_init = 300;   % K (alias of TO_init)
+gas_initial_conditions.V = 0.18;        % m^3
+
+orifice = struct('Cd', 1, 'A', pi*(0.005)^2);   % as written: 5 mm radius
+valve1 = struct('Cd', 0.9, 'A', pi*(0.001)^2);
+valve2 = struct('Cd', 0.9, 'A', pi*(0.001)^2);
+
+cyl = gas_cylinder_model(gas_initial_conditions, orifice, [valve1, valve2]);
+```
+
+`P0_init`/`T0_init` and `PO_init`/`TO_init` are both accepted in `mass_flow`. See `demo_gas_cylinder_construct.m`.
+
+Add the `matlab/` folder to the MATLAB path (ahead of any older `gas_cylinder_model`) so the 3-arg alias is found.
 
 ## Physics change (isentropic → energy + wall heat transfer)
 
