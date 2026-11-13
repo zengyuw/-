@@ -19,3 +19,4 @@ fprintf('cyl class: %s\n', class(cyl));
 fprintf('V = %.3f m^3, orifice.A = %.3e m^2\n', cyl.V, cyl.orifice.A);
 disp('Construction OK. Example mass_flow call (needs REFPROP):');
 disp('[result, conditions] = cyl.mass_flow(conditions, tankP, dt, true, true);');
+disp('% result = [flow_kg_s, T_exit_K]; cylinder P/T in conditions.PO_init/TO_init');

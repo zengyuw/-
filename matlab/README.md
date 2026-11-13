@@ -22,6 +22,15 @@ cyl = gas_cylinder_model(gas_initial_conditions, orifice, [valve1, valve2]);
 
 `P0_init`/`T0_init` and `PO_init`/`TO_init` are both accepted in `mass_flow`. See `demo_gas_cylinder_construct.m`.
 
+### `mass_flow` return shape
+
+```matlab
+[result, new_conditions] = cyl.mass_flow(conditions, tankP, dt, true, true);
+% result = [flow, T_exit]  — outflow kg/s and nozzle/valve exit temperature [K]
+% new_conditions.PO_init / TO_init (and P0_init / T0_init) — cylinder bulk state after energy + heat transfer
+% When flow is 0: result = [0, TO] with conditions unchanged
+```
+
 Add the `matlab/` folder to the MATLAB path (ahead of any older `gas_cylinder_model`) so the 3-arg alias is found.
 
 ## Physics check: `test_cylinder_blowdown.m`

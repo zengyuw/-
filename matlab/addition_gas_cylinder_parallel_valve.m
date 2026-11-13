@@ -70,7 +70,9 @@ methods
             new_conditions = conditions;
             return
         end
-        flow = obj.networkFlow(PO, TO, tankP, valve1_open, valve2_open);
+        % flow: 离开气瓶的质量流率 [kg/s]
+        % T_exit: 经孔板/电磁阀节流后的出口气体温度 [K]（非瓶内主体温度）
+        [flow, T_exit] = obj.networkFlow(PO, TO, tankP, valve1_open, valve2_open);
         delta_m = flow * time_step; %补压气体质量减少
         rho = addition_gas_cylinder_parallel_valve.heliumDensity(TO, PO);
         m0 = rho * obj.V;
@@ -100,20 +102,23 @@ methods
         T_wall_new = obj.updateWallTemperature(T_wall, TO, time_step, A_wall, A_ext);
         obj.T_wall = T_wall_new;
 
-        P_out = max(PO_new, 0);
-        T_out = max(TO_new, 0);
+        P_cyl = max(PO_new, 0);
+        T_cyl = max(TO_new, 0);
         new_conditions = struct( ...
-            'PO_init', P_out, ...
-            'TO_init', T_out, ...
-            'P0_init', P_out, ...
-            'T0_init', T_out, ...
+            'PO_init', P_cyl, ...
+            'TO_init', T_cyl, ...
+            'P0_init', P_cyl, ...
+            'T0_init', T_cyl, ...
             'V', obj.V, ...
             'T_wall', T_wall_new);
-        result = [max(flow, 0), TO_new];
+        % result = [质量流率 kg/s, 节流出口温度 K]；瓶内状态在 new_conditions
+        result = [max(flow, 0), T_exit];
     end
 
-    function flow = networkFlow(obj, PO, TO, Pb, valve1_open, valve2_open)
-        %求节点压力，使孔板流量等于两只电磁阀流量之和。返回离开气瓶的流量。
+    function [flow, T_exit] = networkFlow(obj, PO, TO, Pb, valve1_open, valve2_open)
+        %求节点压力，使孔板流量等于两只电磁阀流量之和。
+        %flow: 离开气瓶的流量 [kg/s]
+        %T_exit: 并联阀出口（进入下游）气体温度 [K]；无流动时为瓶内 TO
         valve1_open = addition_gas_cylinder_parallel_valve.asOpen(valve1_open);
         valve2_open = addition_gas_cylinder_parallel_valve.asOpen(valve2_open);
         obj.P_junction = PO;
@@ -121,6 +126,7 @@ methods
         obj.valve_open = [valve1_open, valve2_open];
         if (~valve1_open && ~valve2_open) || PO <= Pb || TO <= 0 || (PO - Pb) < 1
             flow = 0;
+            T_exit = TO;
             return
         end
         span = PO - Pb;
@@ -143,11 +149,17 @@ methods
             p_mid = fzero(residual, [lo, hi]);
         end
         [m_front, t_mid] = obj.elementFlow(PO, TO, p_mid, obj.orifice);
-        [m1, ~] = obj.valveFlow(p_mid, t_mid, Pb, obj.valves(1), valve1_open);
-        [m2, ~] = obj.valveFlow(p_mid, t_mid, Pb, obj.valves(2), valve2_open);
+        [m1, T1] = obj.valveFlow(p_mid, t_mid, Pb, obj.valves(1), valve1_open);
+        [m2, T2] = obj.valveFlow(p_mid, t_mid, Pb, obj.valves(2), valve2_open);
         obj.P_junction = p_mid;
         obj.branch_flows = [m1, m2];
         flow = max(m_front, 0);
+        m_sum = m1 + m2;
+        if m_sum > 0
+            T_exit = (m1 * T1 + m2 * T2) / m_sum;
+        else
+            T_exit = TO;
+        end
     end
 end
 

@@ -108,17 +108,18 @@ function test_cylinder_blowdown()
         t = t + dt_use;
         n = n + 1;
         flow = result(1);
-        T_now = result(2);
+        T_exit = result(2);           % 节流出口温度（非瓶内主体温度）
+        T_cyl = localTemp(conditions); % 瓶内温度在 new_conditions
         P_now = localPressure(conditions);
 
         if mod(n, log_every) == 0 || P_now <= P_stop
-            fprintf('  t=%8.3f s  P=%8.3f MPa  T=%7.2f K  m_dot=%8.4g kg/s\n', ...
-                t, P_now / 1e6, T_now, flow);
+            fprintf('  t=%8.3f s  P=%8.3f MPa  T_cyl=%7.2f K  T_exit=%7.2f K  m_dot=%8.4g kg/s\n', ...
+                t, P_now / 1e6, T_cyl, T_exit, flow);
         end
 
         log_t(end + 1, 1) = t; %#ok<AGROW>
         log_P(end + 1, 1) = P_now; %#ok<AGROW>
-        log_T(end + 1, 1) = T_now; %#ok<AGROW>
+        log_T(end + 1, 1) = T_cyl; %#ok<AGROW>
         log_m(end + 1, 1) = flow; %#ok<AGROW>
 
         if P_now <= P_stop
